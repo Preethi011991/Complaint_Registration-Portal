@@ -1,0 +1,21 @@
+{"event": "INPUT_REJECTED_SQL_INJECTION", "field": "username", "length": 11}
+{"event": "INPUT_REJECTED_XSS", "field": "comment", "length": 25}
+{"event": "SESSION_VERIFIED", "user_id": 1, "role": "citizen"}
+{"event": "UNAUTHORIZED_ACCESS", "user_role": "citizen", "required_role": "admin", "detail": "Insufficient role for requested operation."}
+{"timestamp": "2026-08-05T08:36:52.206154+00:00", "event": "SMOKE_TEST", "severity": "INFO", "user_id": null, "message": "Smoke test completed successfully.", "test": true}
+{"event": "INPUT_REJECTED_SQL_INJECTION", "field": "username", "length": 11}
+{"event": "INPUT_REJECTED_XSS", "field": "comment", "length": 25}
+{"event": "SESSION_VERIFIED", "user_id": 1, "role": "citizen"}
+{"event": "UNAUTHORIZED_ACCESS", "user_role": "citizen", "required_role": "admin", "detail": "Insufficient role for requested operation."}
+{"timestamp": "2026-08-05T08:48:19.536102+00:00", "event": "SMOKE_TEST", "severity": "INFO", "user_id": null, "message": "Smoke test completed successfully.", "test": true}
+{"timestamp": "2026-08-05T09:03:10.407913+00:00", "severity": "WARNING", "event": "INPUT_REJECTED_SQLI", "user_id": null, "message": "SQL injection pattern detected in input.", "field": "query", "length": 8}
+{"timestamp": "2026-08-05T09:03:10.463422+00:00", "severity": "WARNING", "event": "INPUT_REJECTED_XSS", "user_id": null, "message": "XSS pattern detected in input.", "field": "comment", "length": 25}
+{"timestamp": "2026-08-05T09:03:11.731745+00:00", "severity": "INFO", "event": "SESSION_VERIFIED", "user_id": 42, "message": "Session verified successfully.", "role": "employee"}
+{"timestamp": "2026-08-05T09:03:11.732001+00:00", "severity": "WARNING", "event": "UNAUTHORIZED_ACCESS", "user_id": null, "message": "Insufficient role for requested operation.", "user_role": "citizen", "required_role": "admin"}
+{"timestamp": "2026-08-05T09:03:11.732218+00:00", "severity": "INFO", "event": "SMOKE_TEST_COMPLETE", "user_id": null, "message": "All smoke tests passed.", "test": true, "version": "v2"}
+{"timestamp": "2026-08-05T09:03:30.066844+00:00", "severity": "WARNING", "event": "INPUT_REJECTED_SQLI", "user_id": null, "message": "SQL injection pattern detected in input.", "field": "query", "length": 8}
+{"timestamp": "2026-08-05T09:03:30.067828+00:00", "severity": "WARNING", "event": "INPUT_REJECTED_XSS", "user_id": null, "message": "XSS pattern detected in input.", "field": "comment", "length": 25}
+{"timestamp": "2026-08-05T09:03:31.003266+00:00", "severity": "INFO", "event": "SESSION_VERIFIED", "user_id": 42, "message": "Session verified successfully.", "role": "employee"}
+{"timestamp": "2026-08-05T09:03:31.003526+00:00", "severity": "WARNING", "event": "UNAUTHORIZED_ACCESS", "user_id": null, "message": "Insufficient role for requested operation.", "user_role": "citizen", "required_role": "admin"}
+{"timestamp": "2026-08-05T09:03:31.003781+00:00", "severity": "INFO", "event": "SMOKE_TEST_COMPLETE", "user_id": null, "message": "All smoke tests passed.", "test": true, "version": "v2"}
+{"timestamp": "2026-08-05T10:09:05.456873+00:00", "severity": "WARNING", "event": "INPUT_REJECTED_XSS", "user_id": null, "message": "XSS pattern detected in input.", "field": "input", "length": 30}
