@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Signup</title>
+
+<link rel="stylesheet"
+href="{{ url_for('static',filename='css/auth.css') }}">
+
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="card">
+
+<div class="logo">
+
+RBAC Classification System
+
+</div>
+
+<div class="subtitle">
+
+Create your account
+
+</div>
+
+<form method="POST">
+
+<div class="input-group">
+
+<label>First Name</label>
+
+<input
+type="text"
+name="first_name"
+required>
+
+</div>
+
+<div class="input-group">
+
+<label>Last Name</label>
+
+<input
+type="text"
+name="last_name"
+required>
+
+</div>
+
+<div class="input-group">
+
+<label>Email</label>
+
+<input
+type="email"
+name="email"
+required>
+
+</div>
+
+<div class="input-group">
+
+<label>Password</label>
+
+<input
+type="password"
+name="password"
+required>
+
+</div>
+
+<div class="input-group">
+
+<label>Confirm Password</label>
+
+<input
+type="password"
+name="confirm_password"
+required>
+
+</div>
+
+<div class="input-group">
+
+<label>Role</label>
+
+<select name="role">
+
+<option value="Citizen">Citizen</option>
+
+<option value="Staff Officer">Staff Officer</option>
+
+<option value="System Admin">System Admin</option>
+
+</select>
+
+</div>
+
+<button>
+
+Create Account
+
+</button>
+
+</form>
+
+<div class="footer">
+
+Already have an account?
+
+<a href="/Login">
+
+Login
+
+</a>
+
+</div>
+
+</div>
+
+</div>
+
+</body>
+
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Login</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static',filename='css/auth.css') }}">
+
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="card">
+
+<div class="logo">
+
+RBAC Classification System
+
+</div>
+
+<div class="subtitle">
+
+Login to continue
+
+</div>
+
+<form method="POST">
+
+<div class="input-group">
+
+<label>Email</label>
+
+<input
+type="email"
+name="email"
+placeholder="Enter your email"
+required>
+
+</div>
+
+<div class="input-group">
+
+<label>Password</label>
+
+<input
+type="password"
+name="password"
+placeholder="Enter password"
+required>
+
+</div>
+
+<button type="submit">
+
+Login
+
+</button>
+
+</form>
+
+<div class="footer">
+
+Don't have an account?
+
+<a href="/signup">
+
+Create Account
+
+</a>
+
+</div>
+
+</div>
+
+</div>
+
+</body>
+
+</html>
