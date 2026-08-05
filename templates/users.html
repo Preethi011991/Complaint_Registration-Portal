@@ -54,6 +54,38 @@
     </tr>
     {% endfor %}
 
+    <table>
+
+<tr>
+
+<th>ID</th>
+<th>Identity</th>
+<th>Name</th>
+<th>Email</th>
+<th>Role</th>
+
+</tr>
+
+{% for user in users %}
+
+<tr>
+
+<td>{{ user.id }}</td>
+
+<td>{{ user.identity_number }}</td>
+
+<td>{{ user.first_name }} {{ user.last_name }}</td>
+
+<td>{{ user.email }}</td>
+
+<td>{{ user.role.role_name }}</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
 </table>
 
 </body>

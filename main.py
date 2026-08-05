@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request, redirect, session, url_for
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_mail import Mail, Message
+
+
 
 import sqlalchemy
 from sqlalchemy import (
@@ -32,6 +35,17 @@ engine = create_engine('sqlite:///db.sqlite3')
 
 
 app = Flask(__name__)
+
+app.config["MAIL_SERVER"] = "smtp.gmail.com"
+app.config["MAIL_PORT"] = 587
+app.config["MAIL_USE_TLS"] = True
+app.config["MAIL_USERNAME"] = "shamikshab20228042@gmail.com"
+app.config["MAIL_PASSWORD"] = "pipi xxtr vfac zyds"
+app.config["MAIL_DEFAULT_SENDER"] = "yourgmail@gmail.com"
+
+mail = Mail(app)
+
+
 app.secret_key = "your_super_secret_key_here"
 app.config['SQLALCHEMY_DATABASE_URI'] ='sqlite:///db.sqlite3'
 app.config['SQALCHEMY_TRACK_MODIFICAIIONS'] = False
@@ -39,6 +53,51 @@ app.config['SQALCHEMY_TRACK_MODIFICAIIONS'] = False
 
 SessionLocal=sessionmaker(bind=engine)
 db_session=SessionLocal()
+
+def generate_identity(role_name):
+
+    prefix = {
+        "Citizen": "CIT",
+        "Staff Officer": "STF",
+        "System Admin": "ADM"
+    }[role_name]
+
+    count = db_session.query(User).filter(
+        User.identity_number.like(f"{prefix}%")
+    ).count()
+
+    return f"{prefix}{count + 1:06d}"
+
+def send_identity_email(email, first_name, identity):
+
+    msg = Message(
+        subject="Complaint Management System - Registration Successful",
+        recipients=[email]
+    )
+
+    msg.html = f"""
+    <h2>Welcome, {first_name}!</h2>
+
+    <p>Your account has been created successfully.</p>
+
+    <h3>Your Identity Number</h3>
+
+    <h1>{identity}</h1>
+
+    <p>
+    Please keep this Identity Number safe.
+    You will use it while logging in to the Complaint Management System.
+    </p>
+
+    <br>
+
+    <p>
+    Regards,<br>
+    Complaint Management Team
+    </p>
+    """
+
+    mail.send(msg)
 
 
 class Role(Base):
@@ -53,6 +112,8 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
+
+    identity_number = Column(String(20), unique=True, nullable=False)
 
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
@@ -170,18 +231,22 @@ def login():
     if request.method == "GET":
         return render_template("Login.html")
 
-    email = request.form.get("email")
+    identity = request.form.get("identity_number")
     password = request.form.get("password")
+    
 
-    user = db_session.query(User).filter_by(email=email).first()
+    user = db_session.query(User).filter_by(
+    identity_number=identity
+).first()
 
     if not user:
-        return "Invalid Email"
+        return "Invalid Identity Number"
 
     if not check_password_hash(user.password, password):
         return "Invalid Password"
 
     # Session Variables
+    session["identity"] = user.identity_number
     session["user_id"] = user.id
     session["email"] = user.email
     session["role"] = user.role.role_name
@@ -227,9 +292,12 @@ def signup():
     if not role:
         return "Invalid Role"
 
+    identity = generate_identity(role_name)
+
     hashed_password = generate_password_hash(password)
 
     new_user = User(
+        identity_number=identity,
         first_name=first_name,
         last_name=last_name,
         email=email,
@@ -240,7 +308,25 @@ def signup():
     db_session.add(new_user)
     db_session.commit()
 
-    print("Signup Successful")
+    send_identity_email(
+        email=email,
+        first_name=first_name,
+        identity=identity
+    )
+
+    print(f"""
+        Registration Successful!<br><br>
+
+        Your Identity Number is:
+
+        <b>{identity}</b>
+
+        <br><br>
+
+        Please use this ID to log in.
+        """)
+
+    
     return redirect("/Login")
 
 @app.route("/users")
