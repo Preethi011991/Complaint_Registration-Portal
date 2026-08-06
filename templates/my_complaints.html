@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>My Complaints</title>
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+
+    min-height:100vh;
+
+    background:url("/static/image.webp");
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+
+}
+
+body::before{
+
+    content:"";
+
+    position:fixed;
+    inset:0;
+
+    background:#000;
+
+}
+
+/*=========================
+TOP BAR
+==========================*/
+
+.topbar{
+
+    position:fixed;
+
+    top:20px;
+    left:20px;
+    right:20px;
+
+    height:70px;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    background:rgba(255,255,255,.08);
+
+    backdrop-filter:blur(18px);
+
+    border-radius:18px;
+
+    border:1px solid rgba(212,175,55,.25);
+
+    z-index:100;
+
+}
+
+.home{
+
+    position:absolute;
+
+    left:30px;
+
+    font-size:28px;
+
+    color:#FFD700;
+
+}
+
+.topbar h2{
+
+    color:#FFD700;
+
+    letter-spacing:1px;
+
+}
+
+/*=========================
+CONTAINER
+==========================*/
+
+.container{
+
+    position:relative;
+
+    width:90%;
+
+    margin:120px auto;
+
+    padding:35px;
+
+    border-radius:20px;
+
+    background:#000;
+
+    backdrop-filter:blur(18px);
+
+    border:1px solid rgba(212,175,55,.25);
+
+}
+
+.container h1{
+
+    color:#FFD700;
+
+    margin-bottom:25px;
+
+}
+
+/*=========================
+TABLE
+==========================*/
+
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+    overflow:hidden;
+
+}
+
+th{
+
+    background:rgba(212,175,55,.18);
+
+    color:#FFD700;
+
+    padding:15px;
+
+    text-align:center;
+
+}
+
+td{
+
+    padding:15px;
+
+    color:white;
+
+    text-align:center;
+
+    border-bottom:1px solid rgba(255,255,255,.08);
+
+}
+
+tr:hover{
+
+    background:rgba(255,255,255,.05);
+
+}
+
+/*=========================
+STATUS BADGES
+==========================*/
+
+.pending{
+
+    background:#f39c12;
+
+}
+
+.classified{
+
+    background:#8e44ad;
+
+}
+
+.assigned{
+
+    background:#2980b9;
+
+}
+
+.progress{
+
+    background:#16a085;
+
+}
+
+.resolved{
+
+    background:#27ae60;
+
+}
+
+.badge{
+
+    padding:8px 18px;
+
+    border-radius:20px;
+
+    color:white;
+
+    font-size:14px;
+
+    font-weight:bold;
+
+}
+
+/*=========================
+NO COMPLAINTS
+==========================*/
+
+.empty{
+
+    color:white;
+
+    text-align:center;
+
+    padding:50px;
+
+    font-size:20px;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="topbar">
+
+<a href="/citizen/dashboard">
+
+<i class="fa-solid fa-house home"></i>
+
+</a>
+
+<h2>RULE-BASED COMPLAINT CLASSIFICATION SYSTEM</h2>
+
+</div>
+
+<div class="container">
+
+<h1>My Complaints</h1>
+
+{% if complaints %}
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Complaint ID</th>
+
+<th>Title</th>
+
+<th>Location</th>
+
+<th>Date Submitted</th>
+
+<th>Status</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% if complaints %}
+
+    {% for complaint in complaints %}
+
+    <tr>
+
+        <td>CMP{{ "%06d"|format(complaint.id) }}</td>
+        <td>{{ complaint.title }}</td>
+        <td>{{ complaint.location }}</td>
+        <td>{{ complaint.created_at.strftime("%d-%m-%Y") }}</td>
+
+        <td>
+
+            {% if complaint.status == "Pending" %}
+                <span class="badge pending">Pending</span>
+
+            {% elif complaint.status == "Classified" %}
+                <span class="badge classified">Classified</span>
+
+            {% elif complaint.status == "Assigned" %}
+                <span class="badge assigned">Assigned</span>
+
+            {% elif complaint.status == "In Progress" %}
+                <span class="badge progress">In Progress</span>
+
+            {% elif complaint.status == "Resolved" %}
+                <span class="badge resolved">Resolved</span>
+
+            {% else %}
+                {{ complaint.status }}
+            {% endif %}
+
+        </td>
+
+    </tr>
+
+    {% endfor %}
+
+{% else %}
+
+    <tr>
+        <td colspan="5" style="text-align:center; color:white;">
+            None
+        </td>
+    </tr>
+
+{% endif %}
+
+</tbody>
+</table>
+
+{% else %}
+
+<div class="empty">
+
+<i class="fa-solid fa-folder-open"></i>
+
+<br><br>
+
+You haven't submitted any complaints yet.
+
+</div>
+
+{% endif %}
+
+</div>
+
+</body>
+
+</html>

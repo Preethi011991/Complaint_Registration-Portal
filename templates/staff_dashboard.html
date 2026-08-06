@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Staff Dashboard</title>
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+
+    min-height:100vh;
+
+    background:url("/static/image.webp");
+
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+
+}
+
+body::before{
+
+    content:"";
+
+    position:fixed;
+    inset:0;
+
+    background:rgba(0,0,0,.72);
+
+}
+
+/* ================= HEADER ================= */
+
+.header{
+
+    position:fixed;
+
+    top:20px;
+    left:20px;
+    right:20px;
+
+    height:70px;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    background:rgba(255,255,255,.08);
+
+    backdrop-filter:blur(18px);
+
+    border-radius:18px;
+
+    border:1px solid rgba(212,175,55,.25);
+
+    z-index:100;
+
+}
+
+.header h2{
+
+    color:#FFD700;
+
+    letter-spacing:1px;
+
+}
+
+.home{
+
+    position:absolute;
+
+    left:30px;
+
+    color:#FFD700;
+
+    font-size:28px;
+
+}
+
+/* ================= SIDEBAR ================= */
+
+.sidebar{
+
+    position:fixed;
+
+    top:110px;
+    left:20px;
+
+    width:260px;
+
+    height:calc(100vh - 130px);
+
+    background:rgba(255,255,255,.08);
+
+    backdrop-filter:blur(18px);
+
+    border-radius:18px;
+
+    border:1px solid rgba(212,175,55,.25);
+
+    padding:25px;
+
+}
+
+.sidebar h3{
+
+    color:#FFD700;
+
+    text-align:center;
+
+    margin-bottom:30px;
+
+}
+
+.sidebar a{
+
+    display:block;
+
+    text-decoration:none;
+
+    color:white;
+
+    margin-bottom:15px;
+
+    padding:15px;
+
+    border-radius:12px;
+
+    background:rgba(212,175,55,.12);
+
+    transition:.3s;
+
+}
+
+.sidebar a:hover{
+
+    background:rgba(212,175,55,.28);
+
+    color:#FFD700;
+
+}
+
+/* ================= MAIN ================= */
+
+.main{
+
+    position:absolute;
+
+    top:110px;
+
+    left:300px;
+
+    right:20px;
+
+    bottom:20px;
+
+    padding:30px;
+
+    border-radius:20px;
+
+    background:rgba(255,255,255,.08);
+
+    backdrop-filter:blur(18px);
+
+    border:1px solid rgba(212,175,55,.25);
+
+    overflow:auto;
+
+}
+
+.main h1{
+
+    color:#FFD700;
+
+    margin-bottom:25px;
+
+}
+
+/* ================= TABLE ================= */
+
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+}
+
+th{
+
+    background:rgba(212,175,55,.18);
+
+    color:#FFD700;
+
+    padding:15px;
+
+}
+
+td{
+
+    padding:15px;
+
+    color:white;
+
+    text-align:center;
+
+    border-bottom:1px solid rgba(255,255,255,.08);
+
+}
+
+tr:hover{
+
+    background:rgba(255,255,255,.05);
+
+}
+
+/* ================= BUTTON ================= */
+
+.btn{
+
+    background:rgba(212,175,55,.18);
+
+    color:#FFD700;
+
+    border:1px solid rgba(212,175,55,.35);
+
+    padding:10px 18px;
+
+    border-radius:10px;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+}
+
+.btn:hover{
+
+    background:rgba(212,175,55,.35);
+
+}
+
+.empty{
+
+    text-align:center;
+
+    color:white;
+
+    font-size:18px;
+
+    padding:40px;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+
+<a href="/">
+
+<i class="fa-solid fa-house home"></i>
+
+</a>
+
+<h2>RULE-BASED COMPLAINT CLASSIFICATION SYSTEM</h2>
+
+</div>
+
+<div class="sidebar">
+
+<h3>Staff Panel</h3>
+
+<a href="/staff/dashboard">Dashboard</a>
+
+<a href="/staff/profile">Profile</a>
+
+<a href="/logout">Logout</a>
+
+</div>
+
+<div class="main">
+
+<h1>Assigned Complaints</h1>
+
+{% if assignments %}
+
+<table>
+
+<tr>
+
+<th>Complaint ID</th>
+
+<th>Title</th>
+
+<th>Location</th>
+
+<th>Priority</th>
+
+<th>Status</th>
+
+<th>Action</th>
+
+</tr>
+
+{% for assignment in assignments %}
+
+<tr>
+
+<td>CMP{{ "%06d"|format(assignment.complaint.id) }}</td>
+
+<td>{{ assignment.complaint.title }}</td>
+
+<td>{{ assignment.complaint.location }}</td>
+
+<td>{{ assignment.priority }}</td>
+
+<td>{{ assignment.complaint.status }}</td>
+
+<td>
+
+<form action="/perform_task/{{ assignment.id }}" method="POST">
+
+<button class="btn">
+
+Perform Task
+
+</button>
+
+</form>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% else %}
+
+<div class="empty">
+
+No complaints assigned.
+
+</div>
+
+{% endif %}
+
+</div>
+
+</body>
+
+</html>
