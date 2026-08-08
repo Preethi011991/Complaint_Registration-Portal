@@ -1,8 +1,8 @@
 # Complaint Registration Portal
 
-A Flask-based complaint registration and classification system with role-based access control (RBAC). Citizens register and raise complaints, a keyword-based classifier automatically categorizes them (Electricity / Water / Social), and the system auto-assigns each complaint to the least-busy Staff Officer. System Admins manage users and can generate audit reports.
+A Flask-based complaint registration and classification system with role-based access control (RBAC). Citizens register and raise complaints, a keyword-based classifier automatically categorizes them (Electricity / Water / Social), and the system auto-assigns each complaint to the least-busy Staff Officer. System Admins manage users, complaints, feedback, and can generate audit reports.
 
-> **Note:** This project is the foundation for implementing a **security system** covering the complaint **classification** pipeline and the **RBAC** layer. The complete function reference below is provided so every function can be secured/hardened.
+> **Note:** This project is the foundation for implementing a **security system** covering the complaint **classification** pipeline and the **RBAC** layer, plus **push notifications**. The complete function reference below is provided so every function can be secured/hardened, and the dedicated sections at the end state exactly **where** notifications and security checks must be implemented.
 
 ---
 
@@ -21,7 +21,8 @@ A Flask-based complaint registration and classification system with role-based a
 - [Route Map](#route-map)
 - [Project Structure](#project-structure)
 - [Utility Scripts](#utility-scripts)
-- [Security Notes for Implementation](#security-notes-for-implementation)
+- [Push Notifications - Where to Add Them](#push-notifications---where-to-add-them)
+- [Security System - Where to Implement It](#security-system---where-to-implement-it)
 
 ---
 
@@ -32,8 +33,8 @@ The system has three roles, seeded on first run. Each user gets a unique **ident
 | Role            | Identity Prefix | Access |
 |-----------------|-----------------|--------|
 | Citizen         | `CIT`           | Raise complaints, view own complaints, track status, give feedback |
-| Staff Officer   | `STF`           | View assigned complaints, mark tasks as completed |
-| System Admin    | `ADM`           | Dashboard with stats, manage users, delete users, audit reports |
+| Staff Officer   | `STF`           | View assigned complaints, mark tasks completed, view profile |
+| System Admin    | `ADM`           | Dashboard with stats, manage users/complaints/feedback, audit reports, edit own profile |
 
 Identity numbers are generated as `PREFIX` + zero-padded sequence, e.g. `CIT000001`, `STF000003`, `ADM000001`.
 
@@ -144,34 +145,46 @@ Decorators that gate access to views. These are the core RBAC enforcement points
 | `raise_complaint()` | `/raise_complaint` | GET, POST | `@login_required` | `main.py:419` | Creates a complaint, classifies it, stores classification, and auto-assigns it. |
 | `my_complaints()` | `/my_complaints` | GET | `@login_required` | `main.py:459` | Lists the current user's complaints. |
 | `citizen_dashboard()` | `/citizen/dashboard` | GET | `@login_required` | `main.py:469` | Renders the citizen dashboard. |
-| `complaint_status()` | `/complaint_status` | GET | `@login_required` | `main.py:475` | Shows status of the current user's complaints. |
+| `complaint_status()` | `/citizen/status` | GET | `@login_required` | `main.py:475` | Shows status of the current user's complaints. |
 | `staff_dashboard()` | `/staff/dashboard` | GET | `@login_required` | `main.py:488` | Lists assignments for the logged-in Staff Officer. |
 | `perform_task(assignment_id)` | `/perform_task/<int:assignment_id>` | POST | `@login_required` | `main.py:504` | Marks an assignment `Completed` (only the owning officer's assignment) and the complaint `Resolved`. |
-| `admin_dashboard()` | `/admin/dashboard` | GET | `@admin_required` | `main.py:525` | Renders stats (citizen, staff, complaint, pending counts) and user lists. |
-| `users()` | `/users` | GET | `@login_required` | `main.py:568` | Lists all users. |
-| `audit()` | `/audit` | GET | `@admin_required` | `main.py:575` | Builds an HTML audit report of users, complaints, and classifications. |
-| `delete_user(user_id)` | `/delete_user/<int:user_id>` | POST | `@admin_required` | `main.py:625` | Deletes a user; blocks self-deletion. |
-| `logout()` | `/logout` | GET | Public | `main.py:650` | Clears the session and redirects home. |
+| `admin_dashboard()` | `/admin/dashboard` | GET | `@admin_required` | `main.py:525` | Renders stats (citizen, staff, complaint, pending counts), user lists, and each officer's assignments. |
+| `users()` | `/users` | GET | `@login_required` | `main.py:580` | Lists all users. |
+| `audit()` | `/audit` | GET | `@admin_required` | `main.py:587` | Builds an HTML audit report of users, complaints, and classifications. |
+| `delete_user(user_id)` | `/delete_user/<int:user_id>` | POST | `@admin_required` | `main.py:637` | Deletes a user; blocks self-deletion. |
+| `citizen_feedback()` | `/citizen/feedback` | GET, POST | `@login_required` | `main.py:662` | Lets a citizen rate/comment on their resolved complaints (once each). |
+| `staff_profile()` | `/staff/profile` | GET | `@login_required` | `main.py:725` | Shows an officer's assigned/completed/pending counts. |
+| `edit_user(user_id)` | `/admin/edit_user/<int:user_id>` | GET, POST | `@admin_required` | `main.py:753` | Admin edits a user's name/email; blocks duplicate emails. |
+| `admin_complaints()` | `/admin/complaints` | GET, POST | `@admin_required` | `main.py:793` | Admin views all complaints and updates status (Pending / In Progress / Resolved / Rejected); keeps assignment status in sync. |
+| `admin_feedback()` | `/admin/feedback` | GET | `@admin_required` | `main.py:835` | Admin views all feedback. |
+| `admin_profile()` | `/admin/profile` | GET, POST | `@admin_required` | `main.py:846` | Admin edits own profile and can change password (re-hashed with Werkzeug). |
+| `logout()` | `/logout` | GET | Public | `main.py:892` | Clears the session and redirects home. |
 
 ---
 
 ## Route Map
 
 ```
-/                    GET     index
-/Login               GET/POST login
-/signup              GET/POST signup
-/raise_complaint     GET/POST raise_complaint
-/my_complaints       GET     my_complaints
-/citizen/dashboard   GET     citizen_dashboard
-/complaint_status    GET     complaint_status
-/staff/dashboard     GET     staff_dashboard
-/perform_task/<id>   POST    perform_task
-/admin/dashboard     GET     admin_dashboard
-/users               GET     users
-/audit               GET     audit
-/delete_user/<id>    POST    delete_user
-/logout              GET     logout
+/                          GET     index
+/Login                     GET/POST login
+/signup                    GET/POST signup
+/raise_complaint           GET/POST raise_complaint
+/my_complaints             GET     my_complaints
+/citizen/dashboard         GET     citizen_dashboard
+/citizen/status            GET     complaint_status
+/citizen/feedback          GET/POST citizen_feedback
+/staff/dashboard           GET     staff_dashboard
+/staff/profile             GET     staff_profile
+/perform_task/<id>         POST    perform_task
+/admin/dashboard           GET     admin_dashboard
+/admin/complaints          GET/POST admin_complaints
+/admin/feedback            GET     admin_feedback
+/admin/edit_user/<id>      GET/POST edit_user
+/admin/profile             GET/POST admin_profile
+/users                     GET     users
+/audit                     GET     audit
+/delete_user/<id>          POST    delete_user
+/logout                    GET     logout
 ```
 
 ---
@@ -196,9 +209,16 @@ classification/
     ├── users.html
     ├── raise_complaint.html
     ├── my_complaints.html
-    ├── staff_dashboard.html
     ├── citizen_dashboard.html
-    └── admin_dashboard.html
+    ├── complaint_status.html
+    ├── citizen_feedback.html
+    ├── staff_dashboard.html
+    ├── staff_profile.html
+    ├── admin_dashboard.html
+    ├── complaints.html
+    ├── feedback.html
+    ├── edit_user.html
+    └── profile.html
 ```
 
 ---
@@ -217,18 +237,68 @@ Order: `Feedback` → `ComplaintAssignment` → `ComplaintClassification` → `C
 
 ---
 
-## Security Notes for Implementation
+## Push Notifications - Where to Add Them
 
-This project will be extended into a full security system around the **classification** pipeline and **RBAC**. Key areas to harden:
+Push notifications must be triggered at the following points. Each entry names the exact function, the line, and what should be pushed to whom.
 
-1. **Secrets management** — `app.secret_key`, SMTP credentials, and the Flask debug flag are hard-coded. Move to environment variables.
-2. **RBAC enforcement** — Centralize role checks. `admin_required` currently checks the identity prefix; consider storing/checking `role_id` directly and auditing every route in the [Route Map](#route-map).
-3. **Input validation** — `signup` and `raise_complaint` trust raw form input; validate lengths, types, and content.
-4. **Classification integrity** — `classify_complaint` and `assign_complaint` run after each complaint submission; consider logging inputs/outputs and adding an audit trail for the classification pipeline.
-5. **SQL injection / ORM misuse** — all queries use parameterized SQLAlchemy queries; keep it that way when extending.
-6. **Session security** — configure `SESSION_COOKIE_HTTPONLY`, `SESSION_COOKIE_SAMESITE`, and `SESSION_COOKIE_SECURE`.
-7. **Rate limiting & brute-force protection** — the `login` route returns raw string messages and has no throttling.
-8. **CSRF protection** — `perform_task` and `delete_user` are `POST` endpoints without CSRF tokens.
+| Trigger point | Function & Location | Who gets notified | What to push |
+|---------------|---------------------|-------------------|--------------|
+| New complaint raised | `raise_complaint()` — after `assign_complaint(...)` at `main.py:453` | Assigned Staff Officer | New complaint assigned, with category, priority, and complaint ID |
+| Auto-assignment | `assign_complaint()` — after successful commit at `main.py:333` | Assigned Staff Officer | Assignment confirmation (covers officer created after the complaint) |
+| Complaint status changed by admin | `admin_complaints()` — after status update commit at `main.py:820` | Complaint's citizen | New status (`Pending` / `In Progress` / `Resolved` / `Rejected`) |
+| Task completed by officer | `perform_task()` — after commit at `main.py:519` | Complaint's citizen | Complaint resolved confirmation |
+| Feedback submitted | `citizen_feedback()` — after commit at `main.py:698` | Admin (and optionally assigned officer) | New feedback/rating received |
+| New user registered | `signup()` — after user creation at `main.py:411` | Admin | New user registered (role + identity number) |
+
+**Suggested implementation point:** a reusable helper function (e.g. `send_push_notification(recipient_id, title, body)`) called from the locations above — mirroring the existing `send_identity_email()` pattern at `main.py:89`. For browser push, register service workers on the dashboards (`citizen_dashboard`, `staff_dashboard`, `admin_dashboard`); for email/SMS-based fallback, reuse the Flask-Mail setup.
+
+---
+
+## Security System - Where to Implement It
+
+The security system should be implemented at the following layers. Each item lists the exact function/location to harden.
+
+### 1. RBAC Enforcement (decorators — highest priority)
+- **`login_required(f)`** at `main.py:55` — currently checks only that `user_id` exists in the session. Extend to verify the session is valid and optionally check role eligibility.
+- **`admin_required(f)`** at `main.py:64` — currently infers admin from the identity prefix (`ADM`). Replace prefix checks with the user's actual `role_id` so identity numbers cannot be forged. Apply `admin_required` to every admin route (see Route Map) and `login_required` to all others.
+- Note: `users()` at `main.py:580` is only `@login_required` — decide if listing all users should be restricted to admin.
+
+### 2. Authentication & Session Security
+- **`login()`** at `main.py:344` — add rate limiting / account lockout against brute force, constant-time comparison handling, and CSRF protection on the POST form.
+- **`signup()`** at `main.py:375` — validate all inputs (length, format, allowed role), prevent password re-use, and sanitize before hashing.
+- **Session config** around `app.secret_key` at `main.py:44` — generate a strong random key and set `SESSION_COOKIE_HTTPONLY`, `SESSION_COOKIE_SAMESITE`, and `SESSION_COOKIE_SECURE`.
+- **Secrets** at `main.py:35-40` (SMTP credentials) — move to environment variables / `.env`.
+
+### 3. Authorization on Data Access (IDOR prevention)
+- **`perform_task()`** at `main.py:504` — already scopes to `officer_id == session["user_id"]`; keep this pattern everywhere.
+- **`delete_user(user_id)`** at `main.py:637` — verify role, block self-deletion (already done), and audit the deletion.
+- **`edit_user(user_id)`** at `main.py:753` and **`admin_profile()`** at `main.py:846` — enforce that edits only touch permitted fields and the target exists.
+- **`complaint_status()`** / **`my_complaints()`** at `main.py:459/475` — confirm citizens can only read their own complaints (currently filtered by `citizen_id`).
+
+### 4. CSRF Protection (all POST routes)
+Add CSRF tokens to every POST endpoint:
+- `raise_complaint()` `main.py:419`
+- `perform_task()` `main.py:504`
+- `delete_user()` `main.py:637`
+- `citizen_feedback()` `main.py:662`
+- `edit_user()` `main.py:753`
+- `admin_complaints()` `main.py:793`
+- `admin_profile()` `main.py:846`
+- `login()` `main.py:344` and `signup()` `main.py:375`
+
+### 5. Classification Pipeline Security
+- **`classify_complaint()`** at `main.py:224` — validate/sanitize input before keyword matching, and log the (input → category) pair for an audit trail.
+- **`assign_complaint()`** at `main.py:311` — log assignment decisions and officer selection (from `get_next_staff_officer()` at `main.py:260`) for accountability.
+- Store an audit record whenever a classification or assignment is created/modified (extend the `audit()` report at `main.py:587`).
+
+### 6. Output / Input Sanitization
+- `audit()` at `main.py:587` builds HTML with raw values — escape all user-supplied data to prevent XSS.
+- All `render_template` calls that receive user data (titles, descriptions, comments, feedback) — enable auto-escaping / Jinja2 defaults and escape in templates.
+
+### 7. General Hardening
+- Disable debug mode in production — `app.run(debug=True)` at `main.py:903`.
+- Wrap DB mutations in try/except with `db_session.rollback()` (pattern already used in `delete_user`, `edit_user`, `admin_complaints`, `admin_profile`).
+- Add security headers (CSP, X-Frame-Options, etc.) via middleware or Flask-Talisman.
 
 ---
 
