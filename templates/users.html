@@ -25,67 +25,74 @@
         tr:nth-child(even){
             background:#f2f2f2;
         }
+        .delete-btn{
+            background:none;
+            border:none;
+            color:#c0392b;
+            font-size:18px;
+            font-weight:bold;
+            cursor:pointer;
+            line-height:1;
+        }
+        .delete-btn:hover{
+            color:#e74c3c;
+        }
+        .flash{
+            padding:10px;
+            margin-bottom:15px;
+            border-radius:4px;
+        }
+        .flash.success{
+            background:#d4edda;
+            color:#155724;
+        }
+        .flash.error{
+            background:#f8d7da;
+            color:#721c24;
+        }
     </style>
 </head>
 <body>
 
 <h2>Registered Users</h2>
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
 <table>
     <tr>
         <th>ID</th>
-        <th>First Name</th>
-        <th>Last Name</th>
+        <th>Identity</th>
+        <th>Name</th>
         <th>Email</th>
         <th>Role</th>
-        <th>Status</th>
-        <th>Created At</th>
+        <th>Action</th>
     </tr>
 
     {% for user in users %}
     <tr>
         <td>{{ user.id }}</td>
-        <td>{{ user.first_name }}</td>
-        <td>{{ user.last_name }}</td>
+        <td>{{ user.identity_number }}</td>
+        <td>{{ user.first_name }} {{ user.last_name }}</td>
         <td>{{ user.email }}</td>
-        <td>{{ user.role }}</td>
-        <td>{{ user.status }}</td>
-        <td>{{ user.created_at }}</td>
+        <td>{{ user.role.role_name }}</td>
+        <td>
+            {% if session.role == 'System Admin' %}
+            <form action="{{ url_for('delete_user', user_id=user.id) }}"
+                  method="POST"
+                  onsubmit="return confirm('Delete user {{ user.identity_number }}? This cannot be undone.');"
+                  style="display:inline;">
+                <button type="submit" class="delete-btn" title="Delete user">&times;</button>
+            </form>
+            {% endif %}
+        </td>
     </tr>
     {% endfor %}
-
-    <table>
-
-<tr>
-
-<th>ID</th>
-<th>Identity</th>
-<th>Name</th>
-<th>Email</th>
-<th>Role</th>
-
-</tr>
-
-{% for user in users %}
-
-<tr>
-
-<td>{{ user.id }}</td>
-
-<td>{{ user.identity_number }}</td>
-
-<td>{{ user.first_name }} {{ user.last_name }}</td>
-
-<td>{{ user.email }}</td>
-
-<td>{{ user.role.role_name }}</td>
-
-</tr>
-
-{% endfor %}
-
-</table>
-
 </table>
 
 </body>
