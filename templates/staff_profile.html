@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Staff Profile</title>
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+
+    min-height:100vh;
+
+    background:url("/static/image.webp");
+
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+
+}
+
+body::before{
+
+    content:"";
+
+    position:fixed;
+    inset:0;
+
+    background:#000;
+
+}
+
+/* ================= HEADER ================= */
+
+.header{
+
+    position:fixed;
+
+    top:20px;
+    left:20px;
+    right:20px;
+
+    height:70px;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    background:#000;
+
+    backdrop-filter:blur(18px);
+
+    border-radius:18px;
+
+    border:1px solid rgba(212,175,55,.25);
+
+    z-index:100;
+
+}
+
+.header h2{
+
+    color:#FFD700;
+
+    letter-spacing:1px;
+
+}
+
+.home{
+
+    position:absolute;
+
+    left:30px;
+
+    color:#FFD700;
+
+    font-size:28px;
+
+}
+
+/* ================= SIDEBAR ================= */
+
+.sidebar{
+
+    position:fixed;
+
+    top:110px;
+    left:20px;
+
+    width:260px;
+
+    height:calc(100vh - 130px);
+
+    background:#000;
+
+    backdrop-filter:blur(18px);
+
+    border-radius:18px;
+
+    border:1px solid rgba(212,175,55,.25);
+
+    padding:25px;
+
+}
+
+.sidebar h3{
+
+    color:#FFD700;
+
+    text-align:center;
+
+    margin-bottom:30px;
+
+}
+
+.sidebar a{
+
+    display:block;
+
+    text-decoration:none;
+
+    color:white;
+
+    margin-bottom:15px;
+
+    padding:15px;
+
+    border-radius:12px;
+
+    background:#000;
+
+    transition:.3s;
+
+}
+
+.sidebar a:hover, .sidebar a.active{
+
+    background:rgba(212,175,55,.28);
+
+    color:#FFD700;
+
+}
+
+/* ================= MAIN ================= */
+
+.main{
+
+    position:absolute;
+
+    top:110px;
+
+    left:300px;
+
+    right:20px;
+
+    bottom:20px;
+
+    padding:30px;
+
+    border-radius:20px;
+
+    background:#000;
+
+    backdrop-filter:blur(18px);
+
+    border:1px solid rgba(212,175,55,.25);
+
+    overflow:auto;
+
+}
+
+.main h1{
+
+    color:#FFD700;
+
+    margin-bottom:25px;
+
+}
+
+/* ================= PROFILE CARD ================= */
+
+.profile-top{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:25px;
+
+    margin-bottom:35px;
+
+    padding-bottom:30px;
+
+    border-bottom:1px solid #000;
+
+}
+
+.avatar{
+
+    width:90px;
+
+    height:90px;
+
+    border-radius:50%;
+
+    background:rgba(212,175,55,.18);
+
+    border:2px solid rgba(212,175,55,.4);
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    font-size:34px;
+
+    color:#FFD700;
+
+    font-weight:bold;
+
+}
+
+.profile-top h2{
+
+    color:white;
+
+    font-size:24px;
+
+    margin-bottom:6px;
+
+}
+
+.profile-top .role-tag{
+
+    display:inline-block;
+
+    padding:5px 14px;
+
+    border-radius:20px;
+
+    background:rgba(212,175,55,.18);
+
+    color:#FFD700;
+
+    font-size:13px;
+
+    font-weight:bold;
+
+}
+
+/* ================= INFO GRID ================= */
+
+.info-grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(2, 1fr);
+
+    gap:20px;
+
+    margin-bottom:35px;
+
+}
+
+.info-item{
+
+    background:rgba(255,255,255,.05);
+
+    border:1px solid rgba(255,255,255,.08);
+
+    border-radius:14px;
+
+    padding:18px 22px;
+
+}
+
+.info-item label{
+
+    display:block;
+
+    color:#FFD700;
+
+    font-size:12px;
+
+    text-transform:uppercase;
+
+    letter-spacing:.5px;
+
+    margin-bottom:8px;
+
+}
+
+.info-item span{
+
+    color:white;
+
+    font-size:16px;
+
+}
+
+/* ================= STATS ================= */
+
+.stats-grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(3, 1fr);
+
+    gap:20px;
+
+}
+
+.stat-card{
+
+    background:rgba(255,255,255,.05);
+
+    border:1px solid rgba(255,255,255,.08);
+
+    border-radius:14px;
+
+    padding:24px;
+
+    text-align:center;
+
+}
+
+.stat-card .number{
+
+    font-size:32px;
+
+    font-weight:bold;
+
+    color:#FFD700;
+
+    margin-bottom:6px;
+
+}
+
+.stat-card .label{
+
+    color:#ccc;
+
+    font-size:14px;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+
+<a href="/">
+
+<i class="fa-solid fa-house home"></i>
+
+</a>
+
+<h2>RULE-BASED COMPLAINT CLASSIFICATION SYSTEM</h2>
+
+</div>
+
+<div class="sidebar">
+
+<h3>Staff Panel</h3>
+
+<a href="/staff/dashboard">Dashboard</a>
+
+<a href="/staff/profile" class="active">Profile</a>
+
+<a href="/logout">Logout</a>
+
+</div>
+
+<div class="main">
+
+<h1>My Profile</h1>
+
+<div class="profile-top">
+
+<div class="avatar">
+{{ user.first_name[0]|upper }}{{ user.last_name[0]|upper }}
+</div>
+
+<div>
+<h2>{{ user.first_name }} {{ user.last_name }}</h2>
+<span class="role-tag">{{ user.role.role_name }}</span>
+</div>
+
+</div>
+
+<div class="info-grid">
+
+<div class="info-item">
+<label>Identity Number</label>
+<span>{{ user.identity_number }}</span>
+</div>
+
+<div class="info-item">
+<label>Email</label>
+<span>{{ user.email }}</span>
+</div>
+
+<div class="info-item">
+<label>Staff Since</label>
+<span>{{ user.created_at.strftime("%d %B %Y") if user.created_at else "—" }}</span>
+</div>
+
+<div class="info-item">
+<label>Role</label>
+<span>{{ user.role.role_name }}</span>
+</div>
+
+</div>
+
+<div class="stats-grid">
+
+<div class="stat-card">
+<div class="number">{{ total_assigned }}</div>
+<div class="label">Total Assigned</div>
+</div>
+
+<div class="stat-card">
+<div class="number">{{ completed }}</div>
+<div class="label">Completed</div>
+</div>
+
+<div class="stat-card">
+<div class="number">{{ pending }}</div>
+<div class="label">Pending</div>
+</div>
+
+</div>
+
+</div>
+
+</body>
+
+</html>

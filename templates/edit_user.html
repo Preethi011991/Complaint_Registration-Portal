@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Edit User</title>
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial,Helvetica,sans-serif;
+}
+
+body{
+
+background:#070707;
+color:white;
+min-height:100vh;
+
+}
+
+/* ---------------- NAVBAR ---------------- */
+
+.navbar{
+
+height:80px;
+
+display:flex;
+align-items:center;
+justify-content:space-between;
+
+padding:0 35px;
+
+margin:20px;
+
+background:rgba(255,255,255,.08);
+
+backdrop-filter:blur(18px);
+
+border:1px solid rgba(212,175,55,.25);
+
+border-radius:18px;
+
+}
+
+.title{
+
+font-size:34px;
+font-weight:bold;
+
+color:#ffd32a;
+
+}
+
+.logout-btn{
+
+text-decoration:none;
+
+padding:12px 24px;
+
+background:rgba(212,175,55,.25);
+
+color:#ffd32a;
+
+border-radius:10px;
+
+transition:.3s;
+
+}
+
+.logout-btn:hover{
+
+background:#d4af37;
+color:black;
+
+}
+
+/* ---------------- FORM CARD ---------------- */
+
+.wrapper{
+
+display:flex;
+
+justify-content:center;
+
+padding:20px;
+
+}
+
+.panel{
+
+background:rgba(255,255,255,.08);
+
+backdrop-filter:blur(15px);
+
+border-radius:18px;
+
+padding:35px;
+
+border:1px solid rgba(212,175,55,.2);
+
+max-width:520px;
+
+width:100%;
+
+}
+
+.panel h2{
+
+color:#ffd32a;
+
+margin-bottom:8px;
+
+}
+
+.panel .subtitle{
+
+color:#aaa;
+
+font-size:14px;
+
+margin-bottom:28px;
+
+}
+
+/* ---------------- FLASH ---------------- */
+
+.flash{
+
+padding:12px 16px;
+
+border-radius:8px;
+
+margin-bottom:20px;
+
+font-size:14px;
+
+}
+
+.flash.success{
+
+background:rgba(76,175,80,.15);
+
+color:#7ee08b;
+
+border:1px solid rgba(76,175,80,.35);
+
+}
+
+.flash.error{
+
+background:rgba(231,76,60,.15);
+
+color:#f28b7f;
+
+border:1px solid rgba(231,76,60,.35);
+
+}
+
+/* ---------------- FORM ---------------- */
+
+.input-group{
+
+margin-bottom:20px;
+
+}
+
+.input-group label{
+
+display:block;
+
+color:#ffd32a;
+
+font-size:14px;
+
+margin-bottom:8px;
+
+}
+
+.input-group input{
+
+width:100%;
+
+padding:12px 14px;
+
+border-radius:8px;
+
+border:1px solid rgba(212,175,55,.3);
+
+background:#1a1a1a;
+
+color:white;
+
+font-size:14px;
+
+font-family:inherit;
+
+}
+
+.input-group input:disabled{
+
+color:#888;
+
+background:#141414;
+
+}
+
+.input-group .hint{
+
+font-size:12px;
+
+color:#777;
+
+margin-top:6px;
+
+}
+
+.btn-row{
+
+display:flex;
+
+gap:14px;
+
+margin-top:30px;
+
+}
+
+.save-btn{
+
+flex:1;
+
+padding:14px;
+
+border:none;
+
+border-radius:8px;
+
+background:#d4af37;
+
+color:black;
+
+font-weight:bold;
+
+font-size:15px;
+
+cursor:pointer;
+
+transition:.3s;
+
+}
+
+.save-btn:hover{
+
+background:#f1cb57;
+
+}
+
+.cancel-btn{
+
+flex:1;
+
+padding:14px;
+
+border-radius:8px;
+
+background:rgba(255,255,255,.08);
+
+color:white;
+
+text-align:center;
+
+text-decoration:none;
+
+font-size:15px;
+
+border:1px solid rgba(255,255,255,.15);
+
+transition:.3s;
+
+}
+
+.cancel-btn:hover{
+
+background:rgba(255,255,255,.15);
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+
+<div class="navbar">
+
+<a href="/admin/dashboard" style="color:#ffd32a; font-size:28px;">
+<i class="fa-solid fa-house"></i>
+</a>
+
+<div class="title">
+
+RULE-BASED COMPLAINT CLASSIFICATION SYSTEM
+
+</div>
+
+<a href="/logout" class="logout-btn">
+
+Logout
+
+</a>
+
+</div>
+
+<!-- FORM -->
+
+<div class="wrapper">
+
+<div class="panel">
+
+<h2>Edit User</h2>
+
+<div class="subtitle">Update details for {{ user.identity_number }}</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<form method="POST">
+
+<div class="input-group">
+<label>Identity Number</label>
+<input type="text" value="{{ user.identity_number }}" disabled>
+<div class="hint">Identity numbers cannot be changed.</div>
+</div>
+
+<div class="input-group">
+<label>Role</label>
+<input type="text" value="{{ user.role.role_name }}" disabled>
+</div>
+
+<div class="input-group">
+<label>First Name</label>
+<input type="text" name="first_name" value="{{ user.first_name }}" required>
+</div>
+
+<div class="input-group">
+<label>Last Name</label>
+<input type="text" name="last_name" value="{{ user.last_name }}" required>
+</div>
+
+<div class="input-group">
+<label>Email</label>
+<input type="email" name="email" value="{{ user.email }}" required>
+</div>
+
+<div class="btn-row">
+<button type="submit" class="save-btn">Save Changes</button>
+<a href="/admin/dashboard" class="cancel-btn">Cancel</a>
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+</body>
+
+</html>

@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Admin Dashboard</title>
+<title>Feedback - Admin Dashboard</title>
 
 <link rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -20,329 +20,166 @@ font-family:Arial,Helvetica,sans-serif;
 }
 
 body{
-
 background:#070707;
 color:white;
-
 }
 
 /* ---------------- NAVBAR ---------------- */
 
 .navbar{
-
 height:80px;
-
 display:flex;
 align-items:center;
 justify-content:space-between;
-
 padding:0 35px;
-
 margin:20px;
-
 background:rgba(255,255,255,.08);
-
 backdrop-filter:blur(18px);
-
 border:1px solid rgba(212,175,55,.25);
-
 border-radius:18px;
-
 }
 
 .logo{
-
 color:#ffd32a;
 font-size:32px;
-
 }
 
 .title{
-
 font-size:34px;
 font-weight:bold;
-
 color:#ffd32a;
-
 }
 
 .logout-btn{
-
 text-decoration:none;
-
 padding:12px 24px;
-
 background:rgba(212,175,55,.25);
-
 color:#ffd32a;
-
 border-radius:10px;
-
 transition:.3s;
-
 }
 
 .logout-btn:hover{
-
 background:#d4af37;
 color:black;
-
 }
 
 /* ---------------- LAYOUT ---------------- */
 
 .container{
-
 display:flex;
-
 padding:20px;
-
 gap:20px;
-
 }
 
 /* ---------------- SIDEBAR ---------------- */
 
 .sidebar{
-
 width:260px;
-
 background:rgba(255,255,255,.08);
-
 backdrop-filter:blur(16px);
-
 border:1px solid rgba(212,175,55,.2);
-
 border-radius:18px;
-
 padding:25px;
-
 height:calc(100vh - 150px);
-
 }
 
 .sidebar h2{
-
 text-align:center;
-
 margin-bottom:25px;
-
 color:#ffd32a;
-
 }
 
 .sidebar a{
-
 display:block;
-
 text-decoration:none;
-
 margin-bottom:15px;
-
 padding:14px;
-
 border-radius:12px;
-
 background:rgba(212,175,55,.15);
-
 color:white;
-
 transition:.3s;
-
 }
 
 .sidebar a:hover{
-
 background:#d4af37;
-
 color:black;
+}
 
+.sidebar a.active{
+background:#d4af37;
+color:black;
+font-weight:bold;
 }
 
 /* ---------------- CONTENT ---------------- */
 
 .content{
-
 flex:1;
-
-}
-
-/* ---------- Cards ---------- */
-
-.cards{
-
-display:grid;
-
-grid-template-columns:repeat(4,1fr);
-
-gap:20px;
-
-margin-bottom:35px;
-
-}
-
-.card{
-
-background:rgba(255,255,255,.08);
-
-backdrop-filter:blur(15px);
-
-border:1px solid rgba(212,175,55,.2);
-
-border-radius:18px;
-
-padding:30px;
-
-text-align:center;
-
-}
-
-.card h2{
-
-font-size:40px;
-
-margin-bottom:10px;
-
-color:#ffd32a;
-
-}
-
-.card p{
-
-font-size:18px;
-
 }
 
 /* ---------- Tables ---------- */
 
 .panel{
-
 background:rgba(255,255,255,.08);
-
 backdrop-filter:blur(15px);
-
 border-radius:18px;
-
 padding:25px;
-
 margin-bottom:35px;
-
 border:1px solid rgba(212,175,55,.2);
-
 }
 
 .panel h2{
-
 color:#ffd32a;
-
 margin-bottom:20px;
-
 }
 
 table{
-
 width:100%;
-
 border-collapse:collapse;
-
 }
 
 th{
-
 background:#30280a;
-
 color:#ffd32a;
-
 padding:14px;
-
 text-align:left;
-
 }
 
 td{
-
 padding:14px;
-
 border-bottom:1px solid rgba(255,255,255,.08);
-
 vertical-align:top;
-
+font-size:14px;
 }
 
-.edit-btn{
+.comment-cell{
+max-width:280px;
+color:#cfcfcf;
+font-size:13px;
+}
 
-display:inline-block;
+/* ---------- Rating stars ---------- */
 
-padding:8px 16px;
+.stars{
+color:#ffd32a;
+font-size:15px;
+letter-spacing:2px;
+white-space:nowrap;
+}
 
-background:#d4af37;
+.stars .empty-star{
+color:rgba(255,255,255,.2);
+}
 
-color:black;
+/* ---------- Empty state ---------- */
 
-border:none;
-
-border-radius:8px;
-
-cursor:pointer;
-
-font-weight:bold;
-
-text-decoration:none;
-
+.empty{
 text-align:center;
-
-}
-
-.edit-btn:hover{
-
-background:#f1cb57;
-
-}
-
-/* ---------- Assigned work ---------- */
-
-.assignment-row{
-
-margin-bottom:6px;
-
-font-size:14px;
-
-}
-
-.assignment-row:last-child{
-
-margin-bottom:0;
-
-}
-
-.assignment-status{
-
-font-weight:bold;
-
-margin-left:6px;
-
-}
-
-.assignment-status.completed{
-
-color:#4caf50;
-
-}
-
-.assignment-status.pending{
-
-color:#f5a623;
-
-}
-
-.no-work{
-
+padding:60px 20px;
 color:#888;
-
 font-style:italic;
-
-font-size:14px;
-
+font-size:16px;
 }
 
 </style>
@@ -356,23 +193,17 @@ font-size:14px;
 <div class="navbar">
 
 <div class="logo">
-
-<a href="/" style="color:#ffd32a;">
+<a href="/admin/dashboard" style="color:#ffd32a;">
 <i class="fa-solid fa-house"></i>
 </a>
-
 </div>
 
 <div class="title">
-
 RULE-BASED COMPLAINT CLASSIFICATION SYSTEM
-
 </div>
 
 <a href="/logout" class="logout-btn">
-
 Logout
-
 </a>
 
 </div>
@@ -388,16 +219,10 @@ Logout
 <h2>Admin Panel</h2>
 
 <a href="/admin/dashboard">Dashboard</a>
-
 <a href="/users">Users</a>
-
-
 <a href="/admin/complaints">Complaints</a>
-
-
-<a href="/admin/feedback">Feedback</a>
-
-<a href="/admin/profile">Profile</a>
+<a href="/admin/feedback" class="active">Feedback</a>
+<a href="#">Profile</a>
 
 </div>
 
@@ -405,169 +230,52 @@ Logout
 
 <div class="content">
 
-<!-- STATISTICS -->
-
-<div class="cards">
-
-<div class="card">
-
-<h2>{{ citizen_count }}</h2>
-
-<p>Total Citizens</p>
-
-</div>
-
-<div class="card">
-
-<h2>{{ staff_count }}</h2>
-
-<p>Staff Officers</p>
-
-</div>
-
-<div class="card">
-
-<h2>{{ complaint_count }}</h2>
-
-<p>Total Complaints</p>
-
-</div>
-
-<div class="card">
-
-<h2>{{ pending_count }}</h2>
-
-<p>Pending Complaints</p>
-
-</div>
-
-</div>
-
-<!-- Citizens -->
-
 <div class="panel">
 
-<h2>Citizen Management</h2>
+<h2>Citizen Feedback</h2>
+
+{% if feedback_list %}
 
 <table>
 
 <tr>
-
-<th>Identity</th>
-
-<th>Name</th>
-
-<th>Email</th>
-
-<th>Edit</th>
-
+<th>Complaint</th>
+<th>Citizen</th>
+<th>Rating</th>
+<th>Comments</th>
+<th>Submitted</th>
 </tr>
 
-{% for citizen in citizens %}
-
+{% for fb in feedback_list %}
 <tr>
 
-<td>{{ citizen.identity_number }}</td>
-
-<td>{{ citizen.first_name }} {{ citizen.last_name }}</td>
-
-<td>{{ citizen.email }}</td>
-
 <td>
-
-<a class="edit-btn" href="/admin/edit_user/{{ citizen.id }}">
-
-Edit
-
-</a>
-
+CMP{{ "%06d"|format(fb.complaint.id) }}
+{% if fb.complaint %}<br><span style="color:#aaa;font-size:12px;">{{ fb.complaint.title }}</span>{% endif %}
 </td>
 
-</tr>
+<td>{{ fb.citizen.first_name }} {{ fb.citizen.last_name }}</td>
 
+<td>
+<span class="stars">
+{% for i in range(1, 6) %}
+{% if fb.rating and i <= fb.rating %}★{% else %}<span class="empty-star">★</span>{% endif %}
+{% endfor %}
+</span>
+</td>
+
+<td class="comment-cell">{{ fb.comments or "-" }}</td>
+
+<td>{{ fb.created_at.strftime("%d %b %Y, %I:%M %p") if fb.created_at else "-" }}</td>
+
+</tr>
 {% endfor %}
 
 </table>
-
-</div>
-
-<!-- Staff -->
-
-<div class="panel">
-
-<h2>Staff Officer Management</h2>
-
-<table>
-
-<tr>
-
-<th>Identity</th>
-
-<th>Name</th>
-
-<th>Email</th>
-
-<th>Assigned Work</th>
-
-<th>Edit</th>
-
-</tr>
-
-{% for staff in staffs %}
-
-<tr>
-
-<td>{{ staff.identity_number }}</td>
-
-<td>{{ staff.first_name }} {{ staff.last_name }}</td>
-
-<td>{{ staff.email }}</td>
-
-<td>
-
-{% set assignments = staff_assignments.get(staff.id, []) %}
-
-{% if assignments %}
-
-    {% for a in assignments %}
-
-    <div class="assignment-row">
-
-    CMP{{ "%06d"|format(a.complaint.id) }} — {{ a.complaint.title }}
-
-    <span class="assignment-status {{ 'completed' if a.status == 'Completed' else 'pending' }}">
-
-    ({{ a.status }})
-
-    </span>
-
-    </div>
-
-    {% endfor %}
 
 {% else %}
-
-    <span class="no-work">No complaints assigned</span>
-
+<div class="empty">No feedback history</div>
 {% endif %}
-
-</td>
-
-<td>
-
-<a class="edit-btn" href="/admin/edit_user/{{ staff.id }}">
-
-Edit
-
-</a>
-
-</td>
-
-</tr>
-
-{% endfor %}
-
-</table>
 
 </div>
 
@@ -576,5 +284,4 @@ Edit
 </div>
 
 </body>
-
 </html>

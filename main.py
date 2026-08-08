@@ -36,7 +36,7 @@ app.config["MAIL_SERVER"] = "smtp.gmail.com"
 app.config["MAIL_PORT"] = 587
 app.config["MAIL_USE_TLS"] = True
 app.config["MAIL_USERNAME"] = "shamikshab20228042@gmail.com"
-app.config["MAIL_PASSWORD"] = "dnjc kibn wlcl aepy"
+app.config["MAIL_PASSWORD"] = "xkzy uztm qjcs hmnz"
 app.config["MAIL_DEFAULT_SENDER"] = "shamikshab20228042@gmail.com"
 
 mail = Mail(app)
@@ -472,7 +472,7 @@ def citizen_dashboard():
     return render_template("citizen_dashboard.html")
 
 
-@app.route("/complaint_status")
+@app.route("/citizen/status")
 @login_required
 def complaint_status():
     complaints = (
@@ -554,6 +554,17 @@ def admin_dashboard():
         .order_by(User.first_name).all()
     )
 
+    # Build a mapping of staff_id -> list of their assignments, so the
+    # template can show each officer's assigned work inline.
+    staff_assignments = {}
+    for staff in staffs:
+        staff_assignments[staff.id] = (
+            db_session.query(ComplaintAssignment)
+            .filter_by(officer_id=staff.id)
+            .order_by(ComplaintAssignment.assigned_at.desc())
+            .all()
+        )
+
     return render_template(
         "admin_dashboard.html",
         citizen_count=citizen_count,
@@ -561,7 +572,8 @@ def admin_dashboard():
         complaint_count=complaint_count,
         pending_count=pending_count,
         citizens=citizens,
-        staffs=staffs
+        staffs=staffs,
+        staff_assignments=staff_assignments
     )
 
 
@@ -647,10 +659,242 @@ def delete_user(user_id):
     return redirect("/users")
 
 
+@app.route("/citizen/feedback", methods=["GET", "POST"])
+@login_required
+def citizen_feedback():
+    if request.method == "POST":
+        complaint_id = request.form.get("complaint_id")
+        rating = request.form.get("rating")
+        comments = request.form.get("comments")
+
+        complaint = (
+            db_session.query(Complaint)
+            .filter_by(id=complaint_id, citizen_id=session["user_id"], status="Resolved")
+            .first()
+        )
+
+        if not complaint:
+            flash("Invalid or unresolved complaint selected.", "error")
+            return redirect("/citizen/feedback")
+
+        already_reviewed = (
+            db_session.query(Feedback)
+            .filter_by(complaint_id=complaint.id, citizen_id=session["user_id"])
+            .first()
+        )
+
+        if already_reviewed:
+            flash("You've already submitted feedback for this complaint.", "error")
+            return redirect("/citizen/feedback")
+
+        feedback = Feedback(
+            complaint_id=complaint.id,
+            citizen_id=session["user_id"],
+            rating=int(rating) if rating else None,
+            comments=comments
+        )
+
+        db_session.add(feedback)
+        db_session.commit()
+
+        flash("Thank you! Your feedback has been submitted.", "success")
+        return redirect("/citizen/feedback")
+
+    # Resolved complaints belonging to this citizen that don't already have feedback
+    already_reviewed_ids = [
+        row[0] for row in
+        db_session.query(Feedback.complaint_id)
+        .filter_by(citizen_id=session["user_id"])
+        .all()
+    ]
+
+    resolvable_complaints = (
+        db_session.query(Complaint)
+        .filter(
+            Complaint.citizen_id == session["user_id"],
+            Complaint.status == "Resolved",
+            ~Complaint.id.in_(already_reviewed_ids) if already_reviewed_ids else True
+        )
+        .order_by(Complaint.created_at.desc())
+        .all()
+    )
+
+    return render_template("citizen_feedback.html", complaints=resolvable_complaints)
+
+
+@app.route("/staff/profile")
+@login_required
+def staff_profile():
+    user = db_session.query(User).filter_by(id=session["user_id"]).first()
+
+    total_assigned = (
+        db_session.query(ComplaintAssignment)
+        .filter_by(officer_id=user.id)
+        .count()
+    )
+
+    completed = (
+        db_session.query(ComplaintAssignment)
+        .filter_by(officer_id=user.id, status="Completed")
+        .count()
+    )
+
+    pending = total_assigned - completed
+
+    return render_template(
+        "staff_profile.html",
+        user=user,
+        total_assigned=total_assigned,
+        completed=completed,
+        pending=pending
+    )
+
+
+@app.route("/admin/edit_user/<int:user_id>", methods=["GET", "POST"])
+@admin_required
+def edit_user(user_id):
+    user = db_session.query(User).filter_by(id=user_id).first()
+
+    if not user:
+        flash("User not found.", "error")
+        return redirect("/admin/dashboard")
+
+    if request.method == "POST":
+        first_name = request.form.get("first_name")
+        last_name = request.form.get("last_name")
+        email = request.form.get("email")
+
+        # Prevent duplicate emails across OTHER users
+        existing = (
+            db_session.query(User)
+            .filter(User.email == email, User.id != user.id)
+            .first()
+        )
+
+        if existing:
+            flash("That email is already in use by another user.", "error")
+            return redirect(f"/admin/edit_user/{user.id}")
+
+        user.first_name = first_name
+        user.last_name = last_name
+        user.email = email
+
+        try:
+            db_session.commit()
+            flash(f"User {user.identity_number} updated successfully.", "success")
+        except Exception as e:
+            db_session.rollback()
+            flash(f"Could not update user: {e}", "error")
+
+        return redirect("/admin/dashboard")
+
+    return render_template("edit_user.html", user=user)
+
+@app.route("/admin/complaints", methods=["GET", "POST"])
+@admin_required
+def admin_complaints():
+    if request.method == "POST":
+        complaint_id = request.form.get("complaint_id")
+        new_status = request.form.get("status")
+
+        valid_statuses = ["Pending", "In Progress", "Resolved", "Rejected"]
+
+        complaint = db_session.query(Complaint).filter_by(id=complaint_id).first()
+
+        if not complaint:
+            flash("Complaint not found.", "error")
+        elif new_status not in valid_statuses:
+            flash("Invalid status value.", "error")
+        else:
+            complaint.status = new_status
+
+            # Keep the linked assignment status roughly in sync
+            if complaint.assignment:
+                if new_status == "Resolved":
+                    complaint.assignment.status = "Completed"
+                elif new_status in ("Pending", "In Progress"):
+                    complaint.assignment.status = "Pending"
+
+            try:
+                db_session.commit()
+                flash(f"Complaint #{complaint.id} status updated to '{new_status}'.", "success")
+            except Exception as e:
+                db_session.rollback()
+                flash(f"Could not update status: {e}", "error")
+
+        return redirect("/admin/complaints")
+
+    complaints = (
+        db_session.query(Complaint)
+        .order_by(Complaint.created_at.desc())
+        .all()
+    )
+
+    return render_template("complaints.html", complaints=complaints)
+
+@app.route("/admin/feedback")
+@admin_required
+def admin_feedback():
+    feedback_list = (
+        db_session.query(Feedback)
+        .order_by(Feedback.created_at.desc())
+        .all()
+    )
+
+    return render_template("feedback.html", feedback_list=feedback_list)
+
+@app.route("/admin/profile", methods=["GET", "POST"])
+@admin_required
+def admin_profile():
+    user = db_session.query(User).filter_by(id=session["user_id"]).first()
+
+    if request.method == "POST":
+        first_name = request.form.get("first_name")
+        last_name = request.form.get("last_name")
+        email = request.form.get("email")
+        new_password = request.form.get("new_password")
+        confirm_password = request.form.get("confirm_password")
+
+        # Prevent duplicate emails across OTHER users
+        existing = (
+            db_session.query(User)
+            .filter(User.email == email, User.id != user.id)
+            .first()
+        )
+
+        if existing:
+            flash("That email is already in use by another user.", "error")
+            return redirect("/admin/profile")
+
+        user.first_name = first_name
+        user.last_name = last_name
+        user.email = email
+
+        if new_password:
+            if new_password != confirm_password:
+                flash("New passwords do not match.", "error")
+                return redirect("/admin/profile")
+            user.password = generate_password_hash(new_password)
+
+        try:
+            db_session.commit()
+            session["email"] = user.email  # keep session in sync
+            flash("Profile updated successfully.", "success")
+        except Exception as e:
+            db_session.rollback()
+            flash(f"Could not update profile: {e}", "error")
+
+        return redirect("/admin/profile")
+
+    return render_template("profile.html", user=user)
+
+
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/")
+
+
 
 
 if __name__ == "__main__":
