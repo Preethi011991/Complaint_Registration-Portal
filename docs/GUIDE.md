@@ -11,7 +11,8 @@ together.
 
 - [Phase 0 — Scaffolding](#phase-0--scaffolding)
 - [Phase 1 — Password hashing](#phase-1--password-hashing)
-- Phase 2 — *(to be added)*
+- [Phase 2 — JWT tokens](#phase-2--jwt-tokens)
+- Phase 3 — *(to be added)*
 
 ## Phase 0 — Scaffolding
 
@@ -356,3 +357,231 @@ rule fails, so a password that's both too short and missing a digit
 collects both messages. The final line derives `is_valid` from whether
 *any* reasons were collected, rather than tracking it separately, so the
 boolean and the list can never disagree with each other.
+
+## Phase 2 — JWT tokens
+
+This phase built `app/security/jwt_tokens.py` (issuing tokens) and
+`app/security/token_security.py` (validating them, and revoking them
+early). Together they answer two questions every request needs answered:
+"who is making this request" and "is that still true right now."
+
+### What a JWT is, and what "stateless" means here
+
+A **JWT** (JSON Web Token) is a compact, signed string a server hands to a
+user after they log in, and which the user's browser then sends back on
+every later request, in place of logging in again each time. It's made of
+three parts, separated by dots, each written in a URL-safe encoding called
+base64url:
+
+```
+eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1MSIsInJvbGUiOiJDSVRJWkVOIn0.YKUF0SNhJoJEYesf...
+└────── header ──────┘└──────────── payload ────────────┘└──── signature ────┘
+```
+
+- **Header** — small metadata about the token, mainly which signing
+  algorithm was used (here, `HS256`).
+- **Payload** — the actual claims: who this token is for, their role,
+  when it was issued, when it expires. This is the part `jwt_tokens.py`
+  builds and `token_security.py` reads.
+- **Signature** — a cryptographic stamp computed from the header, the
+  payload, and the server's secret key (`jwt_secret`, from
+  `security_config.py`). Only someone holding that secret can produce a
+  signature that matches — which is what makes the token trustworthy.
+
+"**Stateless**" means the server doesn't need to keep a database record of
+every logged-in session to know a token is legitimate. It can check the
+signature using only the secret it already has, entirely offline, with no
+lookup required. That's efficient — but as the revocation section below
+explains, it's also exactly what makes "logging someone out early"
+harder than it sounds.
+
+### Why the payload is readable by anyone, and what that means for what goes in it
+
+Base64url is not encryption — it's just a way of representing bytes using
+letters, digits, and a couple of symbols, so they're safe to put in a
+URL. Anyone can reverse it instantly, with no key and no secret required
+(try pasting any JWT into a site like jwt.io — the payload shows up in
+plain text immediately). The signature proves the payload *hasn't been
+tampered with*; it does nothing to hide what's inside it.
+
+That means anything placed in the payload should be treated as public to
+whoever holds the token — which includes the user's own browser, any
+proxy or CDN the request passes through, and browser extensions or
+malware that might read local storage. This is why `jwt_tokens.py` opens
+with a rule, in its module docstring, that a token payload must never
+contain a password, a password hash, or an email address. A leaked
+password hash could be brute-forced offline; a leaked email is personal
+data the token has no reason to expose. The claims actually used —
+`sub` (user id), `role`, `session_id`, timestamps, and `department_id` for
+employees — are all things the token is *supposed* to reveal to its own
+holder, so there's nothing unsafe about them being readable.
+
+### Why citizens and employees get different token shapes
+
+A citizen using the portal and an employee working it are answering a
+different question: "who is this person" versus "who is this person, and
+what can they do, and where do they work." An employee's permissions
+depend on their `role` (e.g. "AGENT" vs "ADMIN") and their
+`department_id` (an agent in the billing department shouldn't
+automatically see complaints routed to the technical department) —
+neither of which a citizen token needs, since citizens aren't assigned
+roles or departments.
+
+Rather than force one bloated shape onto both (citizen tokens carrying a
+meaningless `department_id: null`, or worse, guessing wrong department
+defaults), `generate_citizen_token` and `generate_employee_token` each
+produce exactly the claims their use case needs. `initialize_jwt_token`
+exists as a single entry point that dispatches to the right one based on
+`role`, so callers that don't already know which shape they need can
+just ask for a token by role.
+
+### The revocation problem
+
+Here's the tension: a JWT's whole design is to let the server verify it
+*without* checking a database — that's what "stateless" bought us. But
+that means once a token is issued, it stays valid until its `exp`
+timestamp arrives, no matter what happens in between. If a user logs out,
+or an admin needs to force-end a compromised session *right now*, there's
+no way to edit an already-issued, already-signed token to say "never
+mind." The token itself has no memory of anything that happens after it
+was created.
+
+So cancelling a token early can't be done by changing the token — it has
+to be done by giving the server a separate place to remember "this
+session should stop being trusted," and checking that memory every time a
+token comes in. That's a **side channel**: a piece of state that sits
+next to the stateless token, specifically to reintroduce the one
+capability a purely stateless design gave up.
+
+`token_security.py` implements this as a **denylist** (a list of things
+explicitly rejected, as opposed to an "allowlist" of things explicitly
+permitted) stored in Redis:
+
+- `revoke_token(session_id, user_id)` writes the session id into Redis
+  with a time-to-live (TTL) equal to how long a token for that session
+  could still be valid.
+- `is_token_revoked(session_id)` checks whether that session id is
+  currently present.
+- `validate_token` calls `is_token_revoked` on every check, so a revoked
+  session is rejected on its very next use, even though the token itself
+  is technically still "valid" by its signature and expiry alone.
+
+The TTL matters: once a token would have expired naturally anyway, its
+revocation entry is pointless dead weight, since the expiry check would
+already reject it. Matching the TTL to the token's remaining lifetime
+means Redis only ever holds entries for sessions that are revoked *and*
+could otherwise still pass validation — keeping the denylist small and
+self-cleaning, instead of growing forever.
+
+Redis is used here (rather than, say, a regular SQL table) because it's
+built for exactly this kind of fast, short-lived, expiring key lookup, and
+because the code checks it on *every single request* — it needs to be
+fast. `token_security.py` doesn't hard-wire itself to Redis, though: it
+defines a small `RevocationStore` interface with two methods
+(`set_with_ttl`, `exists`), and `RedisRevocationStore` is just one
+implementation of it. `InMemoryRevocationStore` is a second
+implementation used by the test suite, so tests never need a real Redis
+server running to check revocation logic.
+
+### Why four exception types instead of returning False
+
+A function like `validate_token` could just return `True`/`False` for
+"is this token good." But a boolean throws away *why* it failed — and
+that "why" often needs to drive genuinely different behavior, not just a
+generic "access denied" message:
+
+- An **expired** token usually just means the user's session timed out —
+  the normal, expected response is to silently use a refresh token, or
+  redirect to login without alarm.
+- An **invalid** token (bad signature, tampered payload, garbage input) is
+  a sign of something actively wrong — a forged or corrupted token — and
+  might be worth logging as a security event.
+- A **revoked** token means someone (the user, or an admin) deliberately
+  ended this session — the user should be sent to login, not silently
+  refreshed, since a refresh would defeat the whole point of revoking it.
+- A **wrong token type** (e.g. a citizen token used where an employee
+  token was expected) is a sign the caller is hitting the wrong endpoint
+  entirely, which is a different bug class from "this token is broken."
+
+Collapsing all four into one `False` would force every caller to
+re-derive which of these happened by some other means, or to treat them
+identically when they shouldn't be. Four distinct exception types, all
+sharing one `SecurityError` base (in `security_errors.py`), let callers
+catch broadly (`except SecurityError`) when they don't care which one
+happened, or narrowly (`except RevokedTokenError`) when the distinction
+matters — without ever guessing.
+
+### Walking through `validate_token`
+
+```python
+def validate_token(token: str, expected_user_type: str | None = None) -> TokenClaims:
+    config = get_security_config()
+
+    try:
+        payload = jwt.decode(
+            token,
+            config.jwt_secret,
+            algorithms=[config.jwt_algorithm],
+            options={"require": ["exp", "iat", "sub", "role", "session_id"]},
+        )
+    except jwt.ExpiredSignatureError as exc:
+        raise ExpiredTokenError("Token has expired.") from exc
+    except jwt.InvalidTokenError as exc:
+        raise InvalidTokenError(f"Token is invalid: {exc}") from exc
+```
+
+The very first thing this does is ask PyJWT to decode the token *and*
+verify its signature against `config.jwt_secret`, in one call. This has
+to be the first check, because every later check trusts the payload's
+contents — if the signature weren't verified first, an attacker could
+hand in a token with a forged payload (say, `role: "ADMIN"`) and every
+check after this point would happily believe it. `algorithms=[...]` is
+also a deliberate safety measure: without pinning the expected algorithm,
+a malicious token could claim to use a different, weaker algorithm and
+trick a careless implementation into accepting it. The `require` option
+makes sure the claims this code depends on later are actually present,
+rather than failing with a confusing `KeyError` further down.
+
+PyJWT itself checks expiry as part of `decode()`, which is why
+`jwt.ExpiredSignatureError` is caught separately from the general
+`jwt.InvalidTokenError` — this is what turns PyJWT's own errors into this
+project's `ExpiredTokenError` and `InvalidTokenError`.
+
+```python
+    session_id = payload["session_id"]
+    if is_token_revoked(session_id):
+        raise RevokedTokenError(f"Session {session_id!r} has been revoked.")
+```
+
+Only after the token is confirmed genuine and unexpired does it check the
+Redis denylist. This has to come *after* signature verification — checking
+revocation on a forged token would be pointless, since a forged token was
+never a real session to begin with. It comes *before* the role check
+below because a revoked session should always be rejected as "revoked,"
+regardless of what role was expected — that's a more useful, more
+specific answer than a generic mismatch.
+
+```python
+    role = payload["role"]
+    if expected_user_type is not None and role != expected_user_type:
+        raise WrongTokenTypeError(
+            f"Expected token role {expected_user_type!r}, got {role!r}."
+        )
+
+    return _claims_from_payload(payload)
+```
+
+The role check runs last, once the token is already known to be
+genuine, current, and not revoked. Only at that point does it make sense
+to ask "but is this the *right kind* of token for this endpoint" — there
+would be no point checking that on a token that's forged or already
+expired anyway.
+
+The ordering as a whole — signature, then expiry, then revocation, then
+role — moves from "is this token real at all" to "is it still valid
+right now" to "is it the right kind for this request," so each check
+only ever runs once every check before it has already passed. That's
+also why the caller always gets the *most specific* applicable error: a
+revoked, wrong-type token still reports as revoked, because that's true
+regardless of role, and a forged token never reaches the role check at
+all.
