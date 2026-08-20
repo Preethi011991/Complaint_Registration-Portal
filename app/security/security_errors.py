@@ -23,3 +23,7 @@ class RevokedTokenError(SecurityError):
 
 class WrongTokenTypeError(SecurityError):
     """Raised when a token's role does not match the expected user type."""
+
+
+class UnknownRoleError(SecurityError):
+    """Raised when a role has no entry in the RBAC permission mapping."""

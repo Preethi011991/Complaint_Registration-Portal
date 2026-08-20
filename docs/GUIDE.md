@@ -12,7 +12,8 @@ together.
 - [Phase 0 — Scaffolding](#phase-0--scaffolding)
 - [Phase 1 — Password hashing](#phase-1--password-hashing)
 - [Phase 2 — JWT tokens](#phase-2--jwt-tokens)
-- Phase 3 — *(to be added)*
+- [Phase 3 — RBAC](#phase-3--rbac)
+- Phase 4 — *(to be added)*
 
 ## Phase 0 — Scaffolding
 
@@ -585,3 +586,125 @@ also why the caller always gets the *most specific* applicable error: a
 revoked, wrong-type token still reports as revoked, because that's true
 regardless of role, and a forged token never reaches the role check at
 all.
+
+## Phase 3 — RBAC
+
+This phase built `app/security/rbac.py`, which decides what a user is
+*allowed to do* based on their role. Phase 2 answered "who is making this
+request" (via a validated token); this phase answers "is that person
+allowed to do the thing they're trying to do."
+
+### What role-based access control is, with an example from this system
+
+**Role-based access control (RBAC)** is a way of managing permissions by
+grouping users into **roles**, and granting **permissions** to the role
+rather than to each individual user one at a time. Instead of an admin
+having to decide, person by person, "can Alice resolve complaints? Can
+Bob?", the system defines a role like `DEPARTMENT_OFFICER` once, decides
+what that role can do, and then every user assigned that role
+automatically gets those abilities.
+
+Concretely, in this portal: a citizen who logs in gets the `CITIZEN`
+role, which lets them create a complaint (`CREATE_COMPLAINT`) and check on
+it later (`VIEW_COMPLAINT`) — but a citizen can never mark a complaint
+resolved, because `RESOLVE_COMPLAINT` is only granted to
+`DEPARTMENT_OFFICER`, `DEPARTMENT_ADMIN`, and `SYSTEM_ADMIN`. If someone
+tried calling `check_permission(Role.CITIZEN, Permission.RESOLVE_COMPLAINT)`
+anywhere in the app, it returns `False` — no matter which citizen, and no
+matter which complaint. That's the essence of RBAC: the answer depends
+only on the *role*, not on anything specific to the person or the
+complaint.
+
+### The full role → permission table
+
+| Permission | CITIZEN | DEPARTMENT_OFFICER | DEPARTMENT_ADMIN | SYSTEM_ADMIN |
+|---|---|---|---|---|
+| CREATE_COMPLAINT | ✅ | | | ✅ |
+| VIEW_COMPLAINT | ✅ | ✅ | ✅ | ✅ |
+| UPDATE_STATUS | | ✅ | ✅ | ✅ |
+| ASSIGN_COMPLAINT | | | ✅ | ✅ |
+| RESOLVE_COMPLAINT | | ✅ | ✅ | ✅ |
+| SUBMIT_FEEDBACK | ✅ | | | ✅ |
+| UPLOAD_ATTACHMENT | ✅ | ✅ | ✅ | ✅ |
+| VIEW_AUDIT_LOGS | | | ✅ | ✅ |
+| MANAGE_USERS | | | | ✅ |
+
+This table is a direct reflection of the `_ROLE_PERMISSIONS` dict in
+`rbac.py` — if the two ever disagree, the code is the source of truth and
+this table needs updating.
+
+### Why Enums instead of strings
+
+`Role` and `Permission` are both defined as Python `Enum` classes (backed
+by `str`, so they still print and serialize as familiar strings like
+`"CITIZEN"`), rather than just passing raw strings like `"citizen"`
+around the codebase.
+
+The reason is what happens when someone gets a name slightly wrong. If
+permissions were bare strings, a typo like `"RESOLV_COMPLAINT"` (missing
+an E) wouldn't fail anywhere — the check `permission in role_permissions`
+would just quietly evaluate to `False` forever, because the misspelled
+string will never appear in the mapping. That's a *silent permission
+bug*: something that looks like "access correctly denied" in every test
+and every log, when it's actually "this permission can never be granted
+to anyone, because of a typo, and nobody will notice."
+
+With `Enum`, that typo can't be written at all — `Permission.RESOLV_COMPLAINT`
+doesn't exist, so referencing it raises an `AttributeError` immediately,
+at the moment the code runs (and for most editors/type-checkers, before
+it even runs). A crash at import time, pointing at the exact line with
+the typo, is far easier to catch and fix than a silent, permanent access
+bug discovered months later when someone asks "why can no one ever
+resolve a complaint?"
+
+### What "fail closed" means, and why this module defaults to deny
+
+**Fail closed** means that when a check can't be resolved cleanly — an
+unrecognized input, a missing configuration, an unexpected error — the
+system defaults to *denying* access rather than allowing it. The
+opposite, **fail open**, defaults to *allowing* access when something
+goes wrong, so that the failure doesn't block anyone.
+
+Fail open is sometimes the right choice for a non-security feature —
+if a recommendation engine crashes, "just show nothing" is a fine
+default. It's the wrong choice for anything that gates access, because it
+means a bug can silently turn a permission check into an open door.
+
+`rbac.py` fails closed in two places. First, `check_permission` only
+returns `True` if the permission is *explicitly* present in that role's
+granted set — there is no fallback branch anywhere that defaults to
+allow. Second, and more importantly, looking up an **unrecognized role**
+raises `UnknownRoleError` rather than quietly returning an empty
+permission set. An empty set might sound just as safe (it also denies
+everything) — but a silent empty set is indistinguishable from a role
+that's correctly configured with zero permissions, so a misconfigured or
+mistyped role would look identical to "working as intended" in every log
+and every test. Raising loudly instead forces the mistake to surface
+immediately, as a crash pointing at the actual bug, rather than as a
+permission bug in production nobody notices until someone reports being
+wrongly blocked (or worse, wrongly let in, if the bug is elsewhere and
+"empty means deny" turns out not to hold everywhere it's assumed).
+
+### Why this module alone is not enough
+
+RBAC as built here answers one question: "can a user with this **role**
+perform this **kind** of action, in general." It deliberately does not
+know anything about *which* complaint is being acted on, or who filed it.
+
+That's a real gap. Consider: `check_permission(Role.CITIZEN,
+Permission.VIEW_COMPLAINT)` returns `True` — citizens are allowed to view
+complaints. But that's not the same question as "can *this* citizen view
+*this specific* complaint." If the system only ever asked the first
+question, any logged-in citizen could view *any* complaint in the portal
+just by changing an ID in the URL — a real, common vulnerability called
+**IDOR** (Insecure Direct Object Reference), where "am I allowed to do
+this kind of thing" gets mistaken for "am I allowed to do this to this
+specific object."
+
+`rbac.py`'s own comment above the permission mapping states this
+explicitly: it's a role-level check only, and a permission granted here
+is *necessary but not sufficient* — it's the first gate, not the only
+one. The second question — ownership and department-scoped access, i.e.
+"does this complaint belong to this citizen," "is this officer allowed to
+touch complaints outside their own department" — is handled by
+`resource_access.py`, which is what Phase 4 builds.
